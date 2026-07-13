@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Download, Receipt, Search } from "lucide-react";
 import { findOrderByReference } from "../lib/api";
 import type { DuffelOrder } from "../lib/types";
 import { formatDate, formatMoney, formatTime } from "../lib/format";
+import { downloadInvoicePdf, downloadTicketPdf } from "../lib/pdf";
 
 export default function ManageBooking() {
   const [reference, setReference] = useState("");
@@ -80,6 +81,21 @@ export default function ManageBooking() {
             {order.passengers.map((p) => `${p.given_name} ${p.family_name}`).join(", ")}
           </p>
           <p className="mt-2 font-bold text-navy-950">{formatMoney(order.total_amount, order.total_currency)}</p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={() => downloadTicketPdf(order)}
+              className="flex items-center gap-2 rounded-lg bg-navy-950 px-4 py-2 text-xs font-bold text-white transition hover:bg-navy-800"
+            >
+              <Download className="h-3.5 w-3.5" /> Download e-ticket
+            </button>
+            <button
+              onClick={() => downloadInvoicePdf(order)}
+              className="flex items-center gap-2 rounded-lg border border-navy-900/15 px-4 py-2 text-xs font-bold text-navy-800 transition hover:bg-navy-950/5"
+            >
+              <Receipt className="h-3.5 w-3.5" /> Download invoice
+            </button>
+          </div>
 
           <p className="mt-4 text-xs text-navy-700/50">
             Cancellation isn't available for real-time bookings yet — contact support to change or cancel this trip.

@@ -1,7 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Download, Receipt } from "lucide-react";
 import type { DuffelOrder } from "../lib/types";
 import { formatDate, formatMoney, formatTime } from "../lib/format";
+import { downloadInvoicePdf, downloadTicketPdf } from "../lib/pdf";
 
 interface LocationState {
   order: DuffelOrder;
@@ -89,6 +90,21 @@ export default function BookingSuccess() {
         <p className="mt-4 border-t border-navy-900/10 pt-4 text-base font-bold text-navy-950">
           {formatMoney(order.total_amount, order.total_currency)} paid (test mode)
         </p>
+      </div>
+
+      <div className="mt-6 flex flex-wrap justify-center gap-3">
+        <button
+          onClick={() => downloadTicketPdf(order)}
+          className="flex items-center gap-2 rounded-lg bg-navy-950 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-navy-800"
+        >
+          <Download className="h-4 w-4" /> Download e-ticket (PDF)
+        </button>
+        <button
+          onClick={() => downloadInvoicePdf(order)}
+          className="flex items-center gap-2 rounded-lg border border-navy-900/15 px-5 py-2.5 text-sm font-bold text-navy-800 transition hover:bg-navy-950/5"
+        >
+          <Receipt className="h-4 w-4" /> Download invoice (PDF)
+        </button>
       </div>
 
       <Link to="/" className="mt-6 inline-block font-semibold text-sky-500 underline">

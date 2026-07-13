@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Download, Receipt } from "lucide-react";
 import { adminListOrders } from "../lib/api";
 import type { DuffelOrder } from "../lib/types";
 import { formatDate, formatMoney, formatTime } from "../lib/format";
+import { downloadInvoicePdf, downloadTicketPdf } from "../lib/pdf";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function AdminDashboard() {
@@ -53,6 +55,7 @@ export default function AdminDashboard() {
                 <th className="px-4 py-3">Departs</th>
                 <th className="px-4 py-3">Total</th>
                 <th className="px-4 py-3">Booked</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -72,11 +75,31 @@ export default function AdminDashboard() {
                   </td>
                   <td className="px-4 py-3">{formatMoney(o.total_amount, o.total_currency)}</td>
                   <td className="px-4 py-3">{formatDate(o.created_at)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => downloadTicketPdf(o)}
+                        aria-label="Download e-ticket"
+                        title="Download e-ticket"
+                        className="rounded p-1.5 text-navy-700/60 transition hover:bg-navy-950/5 hover:text-navy-950"
+                      >
+                        <Download className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => downloadInvoicePdf(o)}
+                        aria-label="Download invoice"
+                        title="Download invoice"
+                        className="rounded p-1.5 text-navy-700/60 transition hover:bg-navy-950/5 hover:text-navy-950"
+                      >
+                        <Receipt className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {orders.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-navy-700/50">
+                  <td colSpan={7} className="px-4 py-8 text-center text-navy-700/50">
                     No bookings yet.
                   </td>
                 </tr>
