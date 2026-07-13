@@ -1,4 +1,4 @@
-import type { Booking, Flight, SearchParams, SeatClass } from "./types";
+import type { Booking, Flight, LiveFlightStatus, SearchParams, SeatClass } from "./types";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
@@ -84,6 +84,19 @@ export async function cancelBooking(reference: string, email: string): Promise<B
     });
   } catch {
     return undefined;
+  }
+}
+
+export async function getLiveFlightStatus(
+  flightNumber: string,
+): Promise<{ ok: true; flights: LiveFlightStatus[] } | { ok: false; error: string }> {
+  try {
+    const { flights } = await apiFetch<{ flights: LiveFlightStatus[] }>(
+      `/flight-status?flightNumber=${encodeURIComponent(flightNumber)}`,
+    );
+    return { ok: true, flights };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Could not fetch flight status" };
   }
 }
 

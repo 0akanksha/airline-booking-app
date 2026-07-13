@@ -18,6 +18,9 @@ export default function Navbar() {
           <NavLink to="/manage" className={({ isActive }) => (isActive ? "text-white" : "hover:text-white")}>
             Manage booking
           </NavLink>
+          <NavLink to="/track" className={({ isActive }) => (isActive ? "text-white" : "hover:text-white")}>
+            Track a flight
+          </NavLink>
           <NavLink
             to="/admin"
             className={({ isActive }) => (isActive ? "text-white" : "hover:text-white")}

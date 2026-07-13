@@ -40,3 +40,24 @@ export interface SearchParams {
   date: string;
   passengers: number;
 }
+
+export interface LiveFlightEndpoint {
+  airport: string | null;
+  iata: string | null;
+  terminal: string | null;
+  gate: string | null;
+  delay: number | null;
+  scheduled: string | null;
+  estimated: string | null;
+  actual: string | null;
+}
+
+export interface LiveFlightStatus {
+  flight_date: string;
+  flight_status: "scheduled" | "active" | "landed" | "cancelled" | "incident" | "diverted" | string;
+  departure: LiveFlightEndpoint;
+  arrival: LiveFlightEndpoint;
+  airline: { name: string | null; iata: string | null };
+  flight: { number: string | null; iata: string | null };
+  aircraft: { registration: string | null; iata: string | null } | null;
+}

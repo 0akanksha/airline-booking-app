@@ -12,6 +12,7 @@ import { publicBookingsRouter, adminBookingsRouter } from "./routes/bookings.js"
 import { authRouter } from "./routes/auth.js";
 import { checkoutRouter } from "./routes/checkout.js";
 import { webhooksRouter } from "./routes/webhooks.js";
+import { flightStatusRouter } from "./routes/flightStatus.js";
 import { requireAdmin, requireAuth } from "./middleware/auth.js";
 import { ensureAdminSeeded } from "./lib/ensureAdmin.js";
 
@@ -33,6 +34,7 @@ app.use("/api/admin/flights", requireAuth, requireAdmin, adminFlightsRouter);
 app.use("/api/bookings", publicBookingsRouter);
 app.use("/api/admin/bookings", requireAuth, requireAdmin, adminBookingsRouter);
 app.use("/api/checkout", checkoutRouter);
+app.use("/api/flight-status", flightStatusRouter);
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
