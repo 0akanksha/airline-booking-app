@@ -6,12 +6,20 @@ export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-export function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
+export function formatIsoDuration(iso: string | null): string {
+  if (!iso) return "—";
+  const match = /PT(?:(\d+)H)?(?:(\d+)M)?/.exec(iso);
+  if (!match) return iso;
+  const h = match[1] ?? "0";
+  const m = match[2] ?? "0";
   return `${h}h ${m}m`;
 }
 
-export function formatMoney(amount: number): string {
-  return amount.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+export function formatMoney(amount: string | number, currency: string): string {
+  const value = Number(amount);
+  try {
+    return value.toLocaleString("en-US", { style: "currency", currency });
+  } catch {
+    return `${amount} ${currency}`;
+  }
 }

@@ -7,7 +7,6 @@ import Home from "./pages/Home";
 import SearchResults from "./pages/SearchResults";
 import BookingPage from "./pages/BookingPage";
 import BookingSuccess from "./pages/BookingSuccess";
-import BookingCancelled from "./pages/BookingCancelled";
 import ManageBooking from "./pages/ManageBooking";
 import TrackFlight from "./pages/TrackFlight";
 import AdminLogin from "./pages/AdminLogin";
@@ -23,9 +22,8 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/search" element={<SearchResults />} />
-              <Route path="/book/:flightId" element={<BookingPage />} />
+              <Route path="/book/:offerId" element={<BookingPage />} />
               <Route path="/booking/success" element={<BookingSuccess />} />
-              <Route path="/booking/cancelled" element={<BookingCancelled />} />
               <Route path="/manage" element={<ManageBooking />} />
               <Route path="/track" element={<TrackFlight />} />
               <Route path="/admin/login" element={<AdminLogin />} />

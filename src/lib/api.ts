@@ -1,4 +1,13 @@
-import type { Booking, Flight, LiveFlightStatus, SearchParams, SeatClass } from "./types";
+import type {
+  BaggageServiceOption,
+  DuffelOfferDetail,
+  DuffelOfferSummary,
+  DuffelOrder,
+  DuffelPassengerInput,
+  DuffelPlace,
+  LiveFlightStatus,
+  SeatOption,
+} from "./types";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
@@ -14,74 +23,85 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function searchFlights(params: SearchParams): Promise<Flight[]> {
-  const query = new URLSearchParams({
-    origin: params.origin,
-    destination: params.destination,
-    date: params.date,
-    passengers: String(params.passengers),
-  });
-  return apiFetch<Flight[]>(`/flights/search?${query.toString()}`);
-}
-
-export async function getFlight(id: string): Promise<Flight | undefined> {
+export async function searchPlaces(query: string): Promise<DuffelPlace[]> {
+  if (query.trim().length < 2) return [];
   try {
-    return await apiFetch<Flight>(`/flights/${id}`);
+    const { places } = await apiFetch<{ places: DuffelPlace[] }>(`/duffel/places?query=${encodeURIComponent(query)}`);
+    return places;
   } catch {
-    return undefined;
+    return [];
   }
 }
 
-export interface CreateBookingInput {
-  flightId: string;
-  passengerName: string;
-  passengerEmail: string;
-  passengerPhone: string;
-  seatClass: SeatClass;
-  numSeats: number;
+export interface FlightSearchParams {
+  origin: string;
+  destination: string;
+  date: string;
+  returnDate?: string;
+  passengers: number;
 }
 
-// Redirects to Stripe Checkout — the booking itself is created by the
-// webhook once payment is confirmed, not by this call (see server/routes/webhooks.ts).
-export async function startCheckout(
-  input: CreateBookingInput,
-): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+export async function searchFlights(
+  params: FlightSearchParams,
+): Promise<{ ok: true; offers: DuffelOfferSummary[] } | { ok: false; error: string }> {
   try {
-    const { url } = await apiFetch<{ url: string }>("/checkout", {
+    const { offers } = await apiFetch<{ offers: DuffelOfferSummary[] }>("/duffel/search", {
       method: "POST",
-      body: JSON.stringify(input),
+      body: JSON.stringify(params),
     });
-    return { ok: true, url };
+    return { ok: true, offers };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Could not start checkout" };
+    return { ok: false, error: err instanceof Error ? err.message : "Search failed" };
   }
 }
 
-export async function getBookingBySession(sessionId: string): Promise<{ booking: Booking; flight: Flight } | undefined> {
+export async function getOfferWithServices(
+  offerId: string,
+): Promise<{ offer: DuffelOfferDetail; baggageServices: BaggageServiceOption[] } | undefined> {
   try {
-    return await apiFetch<{ booking: Booking; flight: Flight }>(`/bookings/by-session/${encodeURIComponent(sessionId)}`);
-  } catch {
-    return undefined;
-  }
-}
-
-export async function findBooking(reference: string, email: string): Promise<Booking | undefined> {
-  try {
-    const { booking } = await apiFetch<{ booking: Booking; flight: Flight }>(
-      `/bookings/lookup?reference=${encodeURIComponent(reference)}&email=${encodeURIComponent(email)}`,
+    return await apiFetch<{ offer: DuffelOfferDetail; baggageServices: BaggageServiceOption[] }>(
+      `/duffel/offers/${encodeURIComponent(offerId)}`,
     );
-    return booking;
   } catch {
     return undefined;
   }
 }
 
-export async function cancelBooking(reference: string, email: string): Promise<Booking | undefined> {
+export async function getSeatOptions(offerId: string): Promise<SeatOption[]> {
   try {
-    return await apiFetch<Booking>("/bookings/cancel", {
+    const { seats } = await apiFetch<{ seats: SeatOption[] }>(`/duffel/offers/${encodeURIComponent(offerId)}/seatmaps`);
+    return seats;
+  } catch {
+    return [];
+  }
+}
+
+export async function createOrder(
+  offerId: string,
+  passengers: DuffelPassengerInput[],
+  selectedServiceIds: string[],
+): Promise<{ ok: true; order: DuffelOrder } | { ok: false; error: string }> {
+  try {
+    const { order } = await apiFetch<{ order: DuffelOrder }>("/duffel/orders", {
       method: "POST",
-      body: JSON.stringify({ reference, email }),
+      body: JSON.stringify({
+        offerId,
+        passengers: passengers.map(({ mealPreference: _mealPreference, ...p }) => p),
+        selectedServiceIds,
+      }),
     });
+    return { ok: true, order };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Booking failed" };
+  }
+}
+
+export async function findOrderByReference(reference: string, email: string): Promise<DuffelOrder | undefined> {
+  try {
+    const { order } = await apiFetch<{ order: DuffelOrder }>(
+      `/duffel/orders/by-reference?reference=${encodeURIComponent(reference)}&email=${encodeURIComponent(email)}`,
+    );
+    return order;
   } catch {
     return undefined;
   }
@@ -103,22 +123,7 @@ export async function getLiveFlightStatus(
 // --- Admin ---
 // Auth itself (login/logout/session) lives in contexts/AuthContext.tsx.
 
-export async function adminListFlights(): Promise<Flight[]> {
-  return apiFetch<Flight[]>("/admin/flights");
-}
-
-export async function adminListBookings(): Promise<Booking[]> {
-  return apiFetch<Booking[]>("/admin/bookings");
-}
-
-export async function adminCreateFlight(flight: Omit<Flight, "id" | "seatsAvailable" | "status">): Promise<Flight> {
-  return apiFetch<Flight>("/admin/flights", { method: "POST", body: JSON.stringify(flight) });
-}
-
-export async function adminUpdateFlight(id: string, patch: Partial<Flight>): Promise<Flight | undefined> {
-  return apiFetch<Flight>(`/admin/flights/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
-}
-
-export async function adminDeleteFlight(id: string): Promise<void> {
-  await apiFetch<void>(`/admin/flights/${id}`, { method: "DELETE" });
+export async function adminListOrders(): Promise<DuffelOrder[]> {
+  const { orders } = await apiFetch<{ orders: DuffelOrder[] }>("/admin/duffel-orders");
+  return orders;
 }

@@ -7,12 +7,9 @@ import "express-async-errors";
 import path from "node:path";
 import express from "express";
 import cookieParser from "cookie-parser";
-import { publicFlightsRouter, adminFlightsRouter } from "./routes/flights.js";
-import { publicBookingsRouter, adminBookingsRouter } from "./routes/bookings.js";
 import { authRouter } from "./routes/auth.js";
-import { checkoutRouter } from "./routes/checkout.js";
-import { webhooksRouter } from "./routes/webhooks.js";
 import { flightStatusRouter } from "./routes/flightStatus.js";
+import { duffelRouter, duffelAdminRouter } from "./routes/duffel.js";
 import { requireAdmin, requireAuth } from "./middleware/auth.js";
 import { ensureAdminSeeded } from "./lib/ensureAdmin.js";
 
@@ -21,20 +18,13 @@ app.set("trust proxy", 1);
 
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
-// Mounted before express.json() — Stripe's signature verification needs the
-// raw request body, which express.json() would otherwise have consumed.
-app.use("/api/webhooks", webhooksRouter);
-
 app.use(express.json());
 app.use(cookieParser());
 
 app.use("/api/auth", authRouter);
-app.use("/api/flights", publicFlightsRouter);
-app.use("/api/admin/flights", requireAuth, requireAdmin, adminFlightsRouter);
-app.use("/api/bookings", publicBookingsRouter);
-app.use("/api/admin/bookings", requireAuth, requireAdmin, adminBookingsRouter);
-app.use("/api/checkout", checkoutRouter);
 app.use("/api/flight-status", flightStatusRouter);
+app.use("/api/duffel", duffelRouter);
+app.use("/api/admin/duffel-orders", requireAuth, requireAdmin, duffelAdminRouter);
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);

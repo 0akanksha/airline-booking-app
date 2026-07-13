@@ -1,45 +1,29 @@
 import { useState } from "react";
-import { Search, TicketX } from "lucide-react";
-import { cancelBooking, findBooking, getFlight } from "../lib/api";
-import type { Booking, Flight } from "../lib/types";
+import { Search } from "lucide-react";
+import { findOrderByReference } from "../lib/api";
+import type { DuffelOrder } from "../lib/types";
 import { formatDate, formatMoney, formatTime } from "../lib/format";
 
 export default function ManageBooking() {
   const [reference, setReference] = useState("");
   const [email, setEmail] = useState("");
-  const [booking, setBooking] = useState<Booking | null>(null);
-  const [flight, setFlight] = useState<Flight | null>(null);
+  const [order, setOrder] = useState<DuffelOrder | null>(null);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setSearched(true);
-    const found = await findBooking(reference.trim(), email.trim());
-    setBooking(found ?? null);
-    if (found) {
-      const f = await getFlight(found.flightId);
-      setFlight(f ?? null);
-    } else {
-      setFlight(null);
-    }
+    const found = await findOrderByReference(reference.trim(), email.trim());
+    setOrder(found ?? null);
     setLoading(false);
-  }
-
-  async function handleCancel() {
-    if (!booking) return;
-    setCancelling(true);
-    const updated = await cancelBooking(booking.bookingReference, booking.passengerEmail);
-    if (updated) setBooking(updated);
-    setCancelling(false);
   }
 
   return (
     <div className="mx-auto max-w-lg px-6 py-14">
       <h1 className="mb-1 text-2xl font-bold text-navy-950">Manage your booking</h1>
-      <p className="mb-6 text-sm text-navy-700/70">Enter your booking reference and email to view or cancel it.</p>
+      <p className="mb-6 text-sm text-navy-700/70">Enter your booking reference and email to view it.</p>
 
       <form onSubmit={handleSearch} className="flex flex-col gap-4 rounded-xl border border-navy-900/10 bg-white p-6">
         <label className="block">
@@ -48,7 +32,7 @@ export default function ManageBooking() {
             required
             value={reference}
             onChange={(e) => setReference(e.target.value.toUpperCase())}
-            placeholder="e.g. 7QX9K2"
+            placeholder="e.g. SYZNR5"
             className="w-full rounded-lg border border-navy-900/15 px-3 py-2.5 uppercase tracking-widest focus:border-sky-500 focus:outline-none"
           />
         </label>
@@ -72,44 +56,34 @@ export default function ManageBooking() {
         </button>
       </form>
 
-      {searched && !loading && !booking && (
+      {searched && !loading && !order && (
         <p className="mt-6 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           No booking found for that reference and email.
         </p>
       )}
 
-      {booking && flight && (
+      {order && (
         <div className="mt-6 rounded-xl border border-navy-900/10 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
-            <p className="text-xl font-extrabold tracking-widest text-navy-950">{booking.bookingReference}</p>
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${
-                booking.status === "booked" ? "bg-emerald-50 text-emerald-700" : "bg-navy-950/5 text-navy-700/60"
-              }`}
-            >
-              {booking.status}
-            </span>
+            <p className="text-xl font-extrabold tracking-widest text-navy-950">{order.booking_reference}</p>
+            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold uppercase text-emerald-700">Confirmed</span>
           </div>
 
-          <p className="text-sm text-navy-700/70">
-            {flight.originCode} &rarr; {flight.destinationCode} &middot; {formatDate(flight.departureTime)} &middot;{" "}
-            {formatTime(flight.departureTime)}
-          </p>
-          <p className="mt-1 text-sm text-navy-700/70">
-            {booking.passengerName} &middot; {booking.numSeats} {booking.numSeats === 1 ? "seat" : "seats"} &middot; {booking.seatClass}
-          </p>
-          <p className="mt-2 font-bold text-navy-950">{formatMoney(booking.totalPrice)}</p>
+          {order.slices.map((slice, i) => (
+            <p key={i} className="text-sm text-navy-700/70">
+              {slice.origin.iata_code} &rarr; {slice.destination.iata_code} &middot; {formatDate(slice.segments[0].departing_at)}{" "}
+              &middot; {formatTime(slice.segments[0].departing_at)}
+            </p>
+          ))}
 
-          {booking.status === "booked" && (
-            <button
-              onClick={handleCancel}
-              disabled={cancelling}
-              className="mt-5 flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
-            >
-              <TicketX className="h-4 w-4" />
-              {cancelling ? "Cancelling…" : "Cancel booking"}
-            </button>
-          )}
+          <p className="mt-2 text-sm text-navy-700/70">
+            {order.passengers.map((p) => `${p.given_name} ${p.family_name}`).join(", ")}
+          </p>
+          <p className="mt-2 font-bold text-navy-950">{formatMoney(order.total_amount, order.total_currency)}</p>
+
+          <p className="mt-4 text-xs text-navy-700/50">
+            Cancellation isn't available for real-time bookings yet — contact support to change or cancel this trip.
+          </p>
         </div>
       )}
     </div>
