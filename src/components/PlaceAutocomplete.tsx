@@ -57,7 +57,7 @@ export default function PlaceAutocomplete({ label, placeholder, initialLabel, on
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={placeholder}
         autoComplete="off"
-        className="w-full rounded-lg border border-navy-900/15 px-3 py-2.5 focus:border-sky-500 focus:outline-none"
+        className="w-full rounded-lg border border-navy-900/15 bg-white px-3 py-2.5 text-navy-900 placeholder:text-navy-700/40 focus:border-sky-500 focus:outline-none"
       />
       {open && (loading || results.length > 0) && (
         <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-navy-900/10 bg-white shadow-lg">
