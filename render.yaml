@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: airline-booking-app
+    runtime: node
+    plan: free
+    buildCommand: npm run build:all
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # set manually — never commit connection strings
+      - key: JWT_SECRET
+        generateValue: true
+      # NODE_ENV intentionally omitted here — setting it as a platform env var
+      # makes `npm install` skip devDependencies during the build, breaking
+      # `vite build`/`tsc`. NODE_ENV=production is set only in the server's
+      # `start` script instead (server/package.json).
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false

@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy-950: #050b18;
+  --color-navy-900: #0a1630;
+  --color-navy-800: #10203f;
+  --color-navy-700: #17305c;
+  --color-navy-600: #1e3f7d;
+
+  --color-sky-400: #4cc9f0;
+  --color-sky-500: #29a9e0;
+
+  --color-gold-400: #ffc94a;
+  --color-gold-500: #f5b820;
+
+  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-display);
+  background-color: #f5f7fb;
+  color: #10203f;
+}
+
+@keyframes fly-across {
+  0% {
+    transform: translateX(-10%) translateY(0);
+  }
+  100% {
+    transform: translateX(110%) translateY(-6px);
+  }
+}
+
+.animate-fly {
+  animation: fly-across 14s linear infinite;
+}
