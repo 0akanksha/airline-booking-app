@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import AdminRoute from "./components/AdminRoute";
+import ChatWidget from "./components/ChatWidget";
 import { AuthProvider } from "./contexts/AuthContext";
 import Home from "./pages/Home";
 import SearchResults from "./pages/SearchResults";
@@ -33,6 +34,7 @@ export default function App() {
             </Routes>
           </main>
           <Footer />
+          <ChatWidget />
         </div>
       </AuthProvider>
     </BrowserRouter>

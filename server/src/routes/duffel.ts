@@ -38,7 +38,7 @@ duffelRouter.get("/places", async (req, res) => {
   }
 });
 
-function simplifyOffer(offer: DuffelOffer) {
+export function simplifyOffer(offer: DuffelOffer) {
   return {
     id: offer.id,
     totalAmount: offer.total_amount,

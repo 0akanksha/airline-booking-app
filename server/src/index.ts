@@ -10,6 +10,7 @@ import cookieParser from "cookie-parser";
 import { authRouter } from "./routes/auth.js";
 import { flightStatusRouter } from "./routes/flightStatus.js";
 import { duffelRouter, duffelAdminRouter } from "./routes/duffel.js";
+import { chatRouter } from "./routes/chat.js";
 import { requireAdmin, requireAuth } from "./middleware/auth.js";
 import { ensureAdminSeeded } from "./lib/ensureAdmin.js";
 
@@ -24,6 +25,7 @@ app.use(cookieParser());
 app.use("/api/auth", authRouter);
 app.use("/api/flight-status", flightStatusRouter);
 app.use("/api/duffel", duffelRouter);
+app.use("/api/chat", chatRouter);
 app.use("/api/admin/duffel-orders", requireAuth, requireAdmin, duffelAdminRouter);
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
