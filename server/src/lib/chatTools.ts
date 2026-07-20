@@ -1,4 +1,4 @@
-import type { Tool } from "ollama";
+import type { ChatCompletionTool } from "groq-sdk/resources/chat/completions";
 import { duffelFetch } from "./duffel.js";
 import { simplifyOffer } from "../routes/duffel.js";
 import type { DuffelOfferRequest, DuffelOrder, DuffelPlace } from "./duffelTypes.js";
@@ -7,7 +7,7 @@ import type { DuffelOfferRequest, DuffelOrder, DuffelPlace } from "./duffelTypes
 // routers (which serve the booking UI) so the tool schemas and the HTTP request
 // shapes can evolve independently, even though both call the same upstream APIs.
 
-export const chatTools: Tool[] = [
+export const chatTools: ChatCompletionTool[] = [
   {
     type: "function",
     function: {

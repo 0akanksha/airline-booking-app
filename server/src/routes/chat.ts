@@ -1,6 +1,6 @@
 import { Router } from "express";
-import type { Message } from "ollama";
-import { ollama, OLLAMA_MODEL } from "../lib/ollama.js";
+import type { ChatCompletionMessageParam, ChatCompletionMessageToolCall } from "groq-sdk/resources/chat/completions";
+import { groq, GROQ_MODEL } from "../lib/groq.js";
 import { chatTools, executeTool } from "../lib/chatTools.js";
 
 export const chatRouter = Router();
@@ -64,49 +64,100 @@ chatRouter.post("/", async (req, res) => {
 
   const send = (event: object) => res.write(`data: ${JSON.stringify(event)}\n\n`);
 
-  const chatMessages: Message[] = [
+  const chatMessages: ChatCompletionMessageParam[] = [
     { role: "system", content: SYSTEM_PROMPT },
     ...messages.slice(-MAX_HISTORY_MESSAGES).map((m) => ({ role: m.role, content: m.content })),
   ];
 
   try {
-    for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
-      const stream = await ollama.chat({
-        model: OLLAMA_MODEL,
-        messages: chatMessages,
-        tools: chatTools,
-        stream: true,
-      });
+    const MAX_ATTEMPTS_PER_TURN = 2;
 
-      let assistantContent = "";
-      const toolCalls: NonNullable<Message["tool_calls"]> = [];
-      for await (const chunk of stream) {
-        if (chunk.message.content) {
-          assistantContent += chunk.message.content;
-          send({ type: "text", text: chunk.message.content });
-        }
-        if (chunk.message.tool_calls?.length) {
-          toolCalls.push(...chunk.message.tool_calls);
+    for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
+      let content = "";
+      let toolCalls: ChatCompletionMessageToolCall[] = [];
+
+      for (let attempt = 1; ; attempt++) {
+        let emittedText = false;
+        let attemptContent = "";
+        // Streamed tool calls arrive as partial fragments keyed by index — the id
+        // and function name land in the first fragment for that index, and
+        // `arguments` accumulates as a JSON string across subsequent chunks.
+        const toolCallsByIndex = new Map<number, { id: string; name: string; args: string }>();
+
+        try {
+          const stream = await groq.chat.completions.create({
+            model: GROQ_MODEL,
+            messages: chatMessages,
+            tools: chatTools,
+            // Lower temperature makes malformed/hallucinated tool-call JSON
+            // (an occasional Groq/Llama flakiness) noticeably less frequent.
+            temperature: 0.3,
+            stream: true,
+          });
+
+          for await (const chunk of stream) {
+            const delta = chunk.choices[0]?.delta;
+            if (delta?.content) {
+              attemptContent += delta.content;
+              emittedText = true;
+              send({ type: "text", text: delta.content });
+            }
+            for (const fragment of delta?.tool_calls ?? []) {
+              const entry = toolCallsByIndex.get(fragment.index) ?? { id: "", name: "", args: "" };
+              if (fragment.id) entry.id = fragment.id;
+              if (fragment.function?.name) entry.name += fragment.function.name;
+              if (fragment.function?.arguments) entry.args += fragment.function.arguments;
+              toolCallsByIndex.set(fragment.index, entry);
+            }
+          }
+
+          content = attemptContent;
+          toolCalls = [...toolCallsByIndex.values()].map((t, i) => ({
+            id: t.id || `call_${i}`,
+            type: "function" as const,
+            function: { name: t.name, arguments: t.args },
+          }));
+          break; // success
+        } catch (streamErr) {
+          // The model occasionally produces an invalid tool call mid-stream; Groq
+          // surfaces that as an error on the stream itself. Safe to silently retry
+          // once, but only if nothing has reached the user yet for this attempt —
+          // otherwise a retry would duplicate or contradict what they already saw.
+          if (!emittedText && attempt < MAX_ATTEMPTS_PER_TURN) {
+            console.error("chat: retrying turn after stream error:", streamErr);
+            continue;
+          }
+          throw streamErr;
         }
       }
 
-      chatMessages.push({ role: "assistant", content: assistantContent, tool_calls: toolCalls.length ? toolCalls : undefined });
+      chatMessages.push({
+        role: "assistant",
+        content: content || null,
+        tool_calls: toolCalls.length ? toolCalls : undefined,
+      });
 
       if (toolCalls.length === 0) break;
 
       for (const call of toolCalls) {
         send({ type: "status", label: statusLabel(call.function.name) });
-        const result = await executeTool(call.function.name, call.function.arguments);
-        chatMessages.push({ role: "tool", content: result, tool_name: call.function.name });
+        let args: Record<string, unknown> = {};
+        try {
+          args = JSON.parse(call.function.arguments || "{}");
+        } catch {
+          // fall through with empty args — executeTool reports the resulting error
+        }
+        const result = await executeTool(call.function.name, args);
+        chatMessages.push({ role: "tool", tool_call_id: call.id, content: result });
       }
     }
 
     send({ type: "done" });
   } catch (err) {
+    console.error("chat error:", err);
+    const status = (err as { status?: number } | undefined)?.status;
     const message = err instanceof Error ? err.message : "Chat request failed";
-    const hint = message.includes("fetch failed") || message.includes("ECONNREFUSED")
-      ? "Could not reach the local Ollama server — is `ollama serve` running?"
-      : message;
+    const hint = status === 401 ? "The chatbot isn't configured correctly (missing or invalid GROQ_API_KEY)." : message;
     send({ type: "error", error: hint });
   } finally {
     res.end();
